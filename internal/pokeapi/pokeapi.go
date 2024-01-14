@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+  "time"
+
+  "github.com/pmwals09/pokedexcli/internal/pokecache"
 )
+
+var cache = pokecache.NewCache(time.Second)
 
 type APIResponse struct {
 	Count    int     `json:"count"`
@@ -22,15 +27,22 @@ func GetLocationArea(next *string) (APIResponse, error) {
   if next != nil {
     path = *next
   }
-	res, err := http.Get(path)
-	if err != nil {
-		return apiResponse, err
-	}
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return apiResponse, err
-	}
-  err = json.Unmarshal(body, &apiResponse)
+
+  var body []byte
+  if cacheEntry, ok := cache.Get(path); ok {
+    body = cacheEntry
+  } else {
+    res, err := http.Get(path)
+    if err != nil {
+      return apiResponse, err
+    }
+    body, err = io.ReadAll(res.Body)
+    if err != nil {
+      return apiResponse, err
+    }
+    cache.Add(path, body)
+  }
+  err := json.Unmarshal(body, &apiResponse)
   if err != nil {
     return apiResponse, err
   }
