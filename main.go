@@ -49,11 +49,16 @@ var commands = map[string]command{
 		description: "Attempt to catch a Pokémon",
 		callback:    catchCb,
 	},
-  "inspect": {
-    name: "inspect",
-    description: "Inspect a Pokémon that you have caught",
-    callback: inspectCb,
-  },
+	"inspect": {
+		name:        "inspect",
+		description: "Inspect a Pokémon that you have caught",
+		callback:    inspectCb,
+	},
+	"pokedex": {
+		name:        "pokedex",
+		description: "Print a list of all the names of the Pokemon you have caught",
+		callback:    pokedexCb,
+	},
 }
 
 func exitCb(parameters []string, config *config) error {
@@ -120,13 +125,25 @@ func catchCb(parameters []string, config *config) error {
 }
 
 func inspectCb(parameters []string, config *config) error {
-  pokemonName := parameters[0]
-  if val, ok := pokeDex[pokemonName]; ok {
-    val.PrintStats()
-  } else {
-    fmt.Println("You have not caught that Pokémon yet.")
-  }
-  return nil
+	pokemonName := parameters[0]
+	if val, ok := pokeDex[pokemonName]; ok {
+		val.PrintStats()
+	} else {
+		fmt.Println("You have not caught that Pokémon yet.")
+	}
+	return nil
+}
+
+func pokedexCb(parameters []string, config *config) error {
+	if len(pokeDex) == 0 {
+		fmt.Println("You have not caught any Pokémon yet.")
+		return nil
+	}
+	fmt.Println("Your Pokedex:")
+	for name := range pokeDex {
+		fmt.Println("-", name)
+	}
+	return nil
 }
 
 var helpCommand = command{
