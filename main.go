@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"math/rand"
 	"fmt"
 	"os"
 	"strings"
@@ -42,6 +43,11 @@ var commands = map[string]command{
     name: "explore",
     description: "See a list of all the Pokémon in a given area",
     callback: exploreCb,
+  },
+  "catch": {
+    name: "catch",
+    description: "Attempt to catch a Pokémon",
+    callback: catchCb,
   },
 }
 
@@ -85,6 +91,24 @@ func exploreCb(parameters []string, config *config) error {
   fmt.Println("Found the following Pokémon:")
   for _, encounter := range res.PokemonEncounters {
     fmt.Printf("- %s\n", encounter.Pokemon.Name)
+  }
+  return nil
+}
+
+var pokeDex = make(map[string]pokeapi.PokemonResponse)
+func catchCb(parameters []string, config *config) error {
+  pokemonName := parameters[0]
+  fmt.Printf("Throwing a pokeball at %s...\n", pokemonName)
+  pokemonInfo, err := pokeapi.GetPokemon(pokemonName)
+  if err != nil {
+    return err
+  }
+  userChance := rand.Intn(200)
+  if userChance > pokemonInfo.BaseExperience {
+    fmt.Printf("%s was caught!\n", pokemonName)
+    pokeDex[pokemonName] = pokemonInfo
+  } else {
+    fmt.Printf("%s escaped!\n", pokemonName)
   }
   return nil
 }
