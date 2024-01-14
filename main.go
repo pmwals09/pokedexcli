@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"math/rand"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -39,15 +39,20 @@ var commands = map[string]command{
 		description: "Displays the previous 20 location areas in the Pokemon world",
 		callback:    mapbCb,
 	},
-  "explore": {
-    name: "explore",
-    description: "See a list of all the Pokémon in a given area",
-    callback: exploreCb,
-  },
-  "catch": {
-    name: "catch",
-    description: "Attempt to catch a Pokémon",
-    callback: catchCb,
+	"explore": {
+		name:        "explore",
+		description: "See a list of all the Pokémon in a given area",
+		callback:    exploreCb,
+	},
+	"catch": {
+		name:        "catch",
+		description: "Attempt to catch a Pokémon",
+		callback:    catchCb,
+	},
+  "inspect": {
+    name: "inspect",
+    description: "Inspect a Pokémon that you have caught",
+    callback: inspectCb,
   },
 }
 
@@ -57,58 +62,69 @@ func exitCb(parameters []string, config *config) error {
 }
 
 func mapCb(parameters []string, config *config) error {
-  res, err := pokeapi.GetLocationAreas(config.locationNext)
-  if err != nil {
-    return err
-  }
-  config.locationNext = res.Next
-  config.locationPrev = res.Previous
-  for _, loc := range res.Results {
-    fmt.Println(loc.Name)
-  }
-  return nil
+	res, err := pokeapi.GetLocationAreas(config.locationNext)
+	if err != nil {
+		return err
+	}
+	config.locationNext = res.Next
+	config.locationPrev = res.Previous
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
 
 func mapbCb(parameters []string, config *config) error {
-  res, err := pokeapi.GetLocationAreas(config.locationPrev)
-  if err != nil {
-    return err
-  }
-  config.locationNext = res.Next
-  config.locationPrev = res.Previous
-  for _, loc := range res.Results {
-    fmt.Println(loc.Name)
-  }
-  return nil
+	res, err := pokeapi.GetLocationAreas(config.locationPrev)
+	if err != nil {
+		return err
+	}
+	config.locationNext = res.Next
+	config.locationPrev = res.Previous
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
 
 func exploreCb(parameters []string, config *config) error {
-  fmt.Printf("Exploring %s...\n", parameters[0])
-  res, err := pokeapi.GetLocationArea(parameters[0])
-  if err != nil {
-    return err
-  }
-  fmt.Println("Found the following Pokémon:")
-  for _, encounter := range res.PokemonEncounters {
-    fmt.Printf("- %s\n", encounter.Pokemon.Name)
-  }
-  return nil
+	fmt.Printf("Exploring %s...\n", parameters[0])
+	res, err := pokeapi.GetLocationArea(parameters[0])
+	if err != nil {
+		return err
+	}
+	fmt.Println("Found the following Pokémon:")
+	for _, encounter := range res.PokemonEncounters {
+		fmt.Printf("- %s\n", encounter.Pokemon.Name)
+	}
+	return nil
 }
 
 var pokeDex = make(map[string]pokeapi.PokemonResponse)
+
 func catchCb(parameters []string, config *config) error {
+	pokemonName := parameters[0]
+	fmt.Printf("Throwing a pokeball at %s...\n", pokemonName)
+	pokemonInfo, err := pokeapi.GetPokemon(pokemonName)
+	if err != nil {
+		return err
+	}
+	userChance := rand.Intn(200)
+	if userChance > pokemonInfo.BaseExperience {
+		fmt.Printf("%s was caught!\n", pokemonName)
+		pokeDex[pokemonName] = pokemonInfo
+	} else {
+		fmt.Printf("%s escaped!\n", pokemonName)
+	}
+	return nil
+}
+
+func inspectCb(parameters []string, config *config) error {
   pokemonName := parameters[0]
-  fmt.Printf("Throwing a pokeball at %s...\n", pokemonName)
-  pokemonInfo, err := pokeapi.GetPokemon(pokemonName)
-  if err != nil {
-    return err
-  }
-  userChance := rand.Intn(200)
-  if userChance > pokemonInfo.BaseExperience {
-    fmt.Printf("%s was caught!\n", pokemonName)
-    pokeDex[pokemonName] = pokemonInfo
+  if val, ok := pokeDex[pokemonName]; ok {
+    val.PrintStats()
   } else {
-    fmt.Printf("%s escaped!\n", pokemonName)
+    fmt.Println("You have not caught that Pokémon yet.")
   }
   return nil
 }
@@ -135,8 +151,8 @@ Loop:
 		fmt.Print(prompt)
 		for scanner.Scan() {
 			text := scanner.Text()
-      tokens := strings.Fields(text)
-      cmdText, parameters := tokens[0], tokens[1:]
+			tokens := strings.Fields(text)
+			cmdText, parameters := tokens[0], tokens[1:]
 			if cmd, ok := commands[cmdText]; ok {
 				err := cmd.callback(parameters, config)
 				if err != nil {
